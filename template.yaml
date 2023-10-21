@@ -111,9 +111,7 @@ Resources:
 #### Log Groups for the Step function in Amazon Cloudwatch
   StateMachineLogGroup:
     Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: /aws/vendedlogs/states/mysamstateLogGroup
-
+    
 
 Outputs: # <--- optional section
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
