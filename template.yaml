@@ -73,7 +73,8 @@ Resources:
       Runtime: python3.11
       Architectures:
         - x86_64
-
+      Layers:
+        - !Ref MyLambdaLayer    # <--- Reference the lambda layer, deployed above.
 
 #######################################################
 #   Step Functions 
@@ -111,7 +112,7 @@ Resources:
 #### Log Groups for the Step function in Amazon Cloudwatch
   StateMachineLogGroup:
     Type: AWS::Logs::LogGroup
-    
+
 
 Outputs: # <--- optional section
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
