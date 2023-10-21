@@ -1,3 +1,14 @@
+
+# 1. should have lambda layers
+# 2. Lambda deployment
+# 3. Step Function deployment
+# 4. API Gateway deployment
+# 5. API Gateway to StepFunction invocation
+# 6. Secret Manager
+# 7. Parameter store
+# 8. Event bridge
+
+
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
@@ -5,26 +16,118 @@ Description: >
 
   Sample SAM Template for sam-app
 
+Parameters:
+  nonprodsecretarn:
+    Type: String
+    Description: The db password secret's arn. This will change as with the applications env i.e DEV, STAGE, PROD.
+    Default: arn:aws:secretsmanager:us-east-1:942788962651:secret:supersamsecret-12365junk
+
+
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 3
 
 Resources:
+
+  MyLambdaLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: my-lambda-layer-from-sam
+      Description: My Lambda Layer created with SAM
+      ContentUri: dependencies/
+      CompatibleRuntimes:
+        - python3.7
+        - python3.8
+        - python3.9
+        - python3.11   
+
   HelloWorldFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
       CodeUri: hello_world/
       Handler: app.lambda_handler
       Runtime: python3.11
+      Layers:
+        - !Ref MyLambdaLayer
       Architectures:
         - x86_64
+      Policies: 
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref nonprodsecretarn
+
       Events:
         HelloWorld:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /hello
             Method: get
+
+  HelloTexasFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: hello_texas/
+      Handler: app.lambda_handler
+      Runtime: python3.11
+      Architectures:
+        - x86_64
+
+
+#######################################################
+#   Step Functions 
+#######################################################
+
+  SamStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Type: STANDARD
+      DefinitionUri: statemachine/msg.asl.json
+      Tracing:
+        Enabled: True
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogDelivery
+                - logs:GetLogDelivery
+                - logs:UpdateLogDelivery
+                - logs:DeleteLogDelivery
+                - logs:ListLogDeliveries
+                - logs:PutResourcePolicy
+                - logs:DescribeResourcePolicies
+                - logs:DescribeLogGroups
+                - lambda:InvokeFunction
+              Resource: "*"
+      Logging:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt StateMachineLogGroup.Arn
+        IncludeExecutionData: true
+        Level: ALL
+
+#### Log Groups
+
+  StateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/vendedlogs/states/mysamstateLogGroup
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function

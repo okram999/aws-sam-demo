@@ -1,0 +1,28 @@
+{
+    "Comment": "Test SAM deployed state machine",
+    "StartAt": "Lambda Invoke",
+    "States": {
+      "Lambda Invoke": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::lambda:invoke",
+        "OutputPath": "$.Payload",
+        "Parameters": {
+          "FunctionName": "arn:aws:lambda:us-east-1:942788962651:function:py-helloworld:$LATEST"
+        },
+        "Retry": [
+          {
+            "ErrorEquals": [
+              "Lambda.ServiceException",
+              "Lambda.AWSLambdaException",
+              "Lambda.SdkClientException",
+              "Lambda.TooManyRequestsException"
+            ],
+            "IntervalSeconds": 1,
+            "MaxAttempts": 3,
+            "BackoffRate": 2
+          }
+        ],
+        "End": true
+      }
+    }
+  }
