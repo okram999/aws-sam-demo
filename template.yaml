@@ -88,7 +88,7 @@ Resources:
       DefinitionUri: statemachine/msg.asl.json   # <-- State machine deployed using the Amazon State Language (ASL). This will allow easy codification of existing step functions
       Tracing:
         Enabled: True
-      Policies:
+      Policies:                                  # <--- IAM role for the state machine
         - Version: '2012-10-17'
           Statement:
             - Effect: Allow
