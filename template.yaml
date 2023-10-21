@@ -30,6 +30,8 @@ Globals:
 
 Resources:
 
+# Create AWS Lambda layer
+# Libraries in the dependencies/ folder are published into the AWS Lambda layer
   MyLambdaLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
@@ -42,6 +44,7 @@ Resources:
         - python3.9
         - python3.11   
 
+# Deploy AWS lambda function and frontend it with AWS API Gateway
   HelloWorldFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -49,20 +52,19 @@ Resources:
       Handler: app.lambda_handler
       Runtime: python3.11
       Layers:
-        - !Ref MyLambdaLayer
+        - !Ref MyLambdaLayer    # <--- Reference the lambda layer, deployed above.
       Architectures:
         - x86_64
       Policies: 
-        - AWSSecretsManagerGetSecretValuePolicy:
-            SecretArn: !Ref nonprodsecretarn
-
-      Events:
+        - AWSSecretsManagerGetSecretValuePolicy:   
+            SecretArn: !Ref nonprodsecretarn   # <---- Attaching AWS Lambda executionrole to get access to the secret in the secret manager
+      Events:     # Creates an API in the API gateway with the lambda deployment
         HelloWorld:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /hello
             Method: get
-
+# Another lambda getting deployed 
   HelloTexasFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -81,7 +83,7 @@ Resources:
     Type: AWS::Serverless::StateMachine
     Properties:
       Type: STANDARD
-      DefinitionUri: statemachine/msg.asl.json
+      DefinitionUri: statemachine/msg.asl.json   # <-- State machine deployed using the Amazon State Language (ASL). This will allow easy codification of existing step functions
       Tracing:
         Enabled: True
       Policies:
@@ -106,30 +108,14 @@ Resources:
         IncludeExecutionData: true
         Level: ALL
 
-#### Log Groups
-
+#### Log Groups for the Step function in Amazon Cloudwatch
   StateMachineLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: /aws/vendedlogs/states/mysamstateLogGroup
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Outputs:
+Outputs: # <--- optional section
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
