@@ -5,8 +5,9 @@
 # 4. API Gateway deployment
 # 5. API Gateway to StepFunction invocation
 # 6. Secret Manager
-# 7. Parameter store
-# 8. Event bridge
+
+# Tips:
+#   - Do not provide static name to resources. A randomly generated resource names are much friendlier with UPDATE operations
 
 
 AWSTemplateFormatVersion: '2010-09-09'
