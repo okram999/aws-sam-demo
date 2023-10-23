@@ -1,7 +1,7 @@
 
 # 1. should have lambda layers
 # 2. Lambda deployment
-# 3. Step Function deployment
+# 3. Step Function deployment 
 # 4. API Gateway deployment
 # 5. API Gateway to StepFunction invocation
 # 6. Secret Manager
@@ -134,6 +134,94 @@ Resources:
 #### Log Groups for the Step function in Amazon Cloudwatch
   StateMachineLogGroup:
     Type: AWS::Logs::LogGroup
+
+#### Deploying API Gateway with the StepFunction as backend####
+
+##########################################################################
+#   API GATEWAY ROLE WITH PERMISSIONS TO START EXECUTING STEP FUNCTION   #
+##########################################################################
+  ApiGatewayStepFunctionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: !Join ["", ["/", !Ref "AWS::StackName", "/"]]
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowApiGatewayServiceToAssumeRole
+            Effect: Allow
+            Action:
+              - 'sts:AssumeRole'
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+      Policies:
+        - PolicyName: CallStepFunctions
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'states:StartExecution'
+                Resource:
+                  - !Ref SamStateMachine
+
+
+##########################################################################
+#   REST API GATEWAY                                                     #
+##########################################################################
+  apiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Name: !Sub ${AWS::StackName}-api
+
+
+##########################################################################
+#   API GATEWAY METHOD                                                   #
+##########################################################################
+  apiGatewayRootMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: POST
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS
+        Credentials: !GetAtt ApiGatewayStepFunctionsRole.Arn 
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:states:action/StartExecution
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        RequestTemplates: 
+          application/json: !Sub 
+            - |- 
+              #set($data = $util.escapeJavaScript($input.json('$'))) 
+              { 
+                "input": "$data", 
+                "stateMachineArn": "${StateMachineArn}"
+              }
+            - { StateMachineArn: !Ref SamStateMachine }
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: ''
+      ResourceId: !GetAtt apiGateway.RootResourceId
+      RestApiId: !Ref apiGateway
+
+##########################################################################
+#   API GATEWAY DEPLOYMENT                                               #
+##########################################################################
+  apiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - apiGatewayRootMethod
+    Properties:
+      RestApiId: !Ref apiGateway
+      # StageName: 'dev'  
 
 
 Outputs: # <--- optional section
