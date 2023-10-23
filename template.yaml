@@ -85,7 +85,28 @@ Resources:
     Type: AWS::Serverless::StateMachine
     Properties:
       Type: STANDARD
-      DefinitionUri: statemachine/msg.asl.json   # <-- State machine deployed using the Amazon State Language (ASL). This will allow easy codification of existing step functions
+      # DefinitionUri: statemachine/msg.asl.json   # <-- State machine deployed using the Amazon State Language (ASL). This will allow easy codification of existing step functions
+      Definition:
+        Comment: A test state machine to greet Texas
+        StartAt: "Lambda Invoke"
+        States:
+          Lambda Invoke:
+            Type: Task
+            Resource: "arn:aws:states:::lambda:invoke"
+            OutputPath: "$.Payload"
+            Parameters: 
+              FunctionName: !GetAtt HelloTexasFunction.Arn
+            Retry:
+              - 
+                ErrorEquals:
+                  - Lambda.ServiceException
+                  - Lambda.AWSLambdaException
+                  - Lambda.SdkClientException
+                  - Lambda.TooManyRequestsException
+                IntervalSeconds: 1
+                MaxAttempts: 3
+                BackoffRate: 2
+            End: true
       Tracing:
         Enabled: True
       Policies:                                  # <--- IAM role for the state machine
